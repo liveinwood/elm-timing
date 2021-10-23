@@ -3,6 +3,7 @@ module Main exposing (..)
 import Browser
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
+import Time
 
 
 
@@ -11,23 +12,40 @@ import Html.Events exposing (onClick)
 
 main : Program () Model Msg
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.element
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subscriptions
+        }
 
 
 
 -- MODEL
 
 
-type Model
+type State
     = Init
     | Running Int
     | AllBlack
     | Stopped
 
 
-init : Model
-init =
-    Init
+type alias Model =
+    { state : State
+    , startAt : Maybe Int
+    , stopAt : Maybe Int
+    }
+
+
+initModel : Model
+initModel =
+    Model Init Nothing Nothing
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( initModel, Cmd.none )
 
 
 
@@ -36,77 +54,80 @@ init =
 
 type Msg
     = Start
-    | Tick
+    | Tick Time.Posix
     | Stop
     | Reset
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case model of
+    let
+        state =
+            model.state
+    in
+    case state of
         Init ->
             case msg of
                 Start ->
-                    Running 0
+                    ( { model | state = Running 0 }, Cmd.none )
 
                 _ ->
-                    model
-
-        Running 3 ->
-            case msg of
-                Tick ->
-                    AllBlack
-
-                Stop ->
-                    Stopped
-
-                Reset ->
-                    Init
-
-                _ ->
-                    model
+                    ( model, Cmd.none )
 
         Running n ->
             case msg of
-                Tick ->
-                    Running (n + 1)
+                Tick _ ->
+                    if n >= 3 then
+                        ( { model | state = AllBlack, startAt = Just 0 }, Cmd.none )
+
+                    else
+                        ( { model | state = Running (n + 1) }, Cmd.none )
 
                 Stop ->
-                    Stopped
+                    ( { model | state = Stopped }, Cmd.none )
 
                 Reset ->
-                    Init
+                    ( initModel, Cmd.none )
 
                 _ ->
-                    model
+                    ( model, Cmd.none )
 
         AllBlack ->
             case msg of
                 Stop ->
-                    Stopped
+                    ( { model | state = Stopped, stopAt = Just 1 }, Cmd.none )
 
                 Reset ->
-                    Init
+                    ( initModel, Cmd.none )
 
                 _ ->
-                    model
+                    ( model, Cmd.none )
 
         Stopped ->
             case msg of
                 Reset ->
-                    Init
+                    ( initModel, Cmd.none )
 
                 _ ->
-                    model
+                    ( model, Cmd.none )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Time.every 2000 Tick
 
 
 
 -- VIEW
 
 
-toString : Model -> String
-toString model =
-    case model of
+light : Model -> String
+light model =
+    case model.state of
         Init ->
             "○○○"
 
@@ -124,9 +145,8 @@ toString model =
 view : Model -> Html Msg
 view model =
     div []
-        [ div [] [ text (toString model) ]
+        [ div [] [ text (light model) ]
         , button [ onClick Start ] [ text "start" ]
-        , button [ onClick Tick ] [ text "tick" ]
         , button [ onClick Stop ] [ text "stop" ]
         , button [ onClick Reset ] [ text "reset" ]
         ]
