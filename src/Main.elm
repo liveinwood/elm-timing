@@ -1,8 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, id)
+import Html exposing (Html, a, button, div, text)
+import Html.Attributes exposing (class, href, id)
 import Html.Events exposing (onClick)
 import Maybe
 import Task
@@ -170,6 +170,7 @@ view model =
             , button [ onClick Reset ] [ text "reset" ]
             ]
         , showResult model
+        , div [] [ text "created by ", a [ href "https://twitter.com/liveinwood0422" ] [ text "@liveinwood0422" ] ]
         ]
 
 
