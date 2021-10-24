@@ -1,0 +1,72 @@
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Elm-timing</title>
+	<script src="main.js"></script>
+	<style>
+		#main {
+			width: 500px;
+			margin: auto;
+		}
+
+		.lights {
+			width: 500px;
+			height: 100px;
+			background: black;
+			display: flex;
+		}
+
+		.light-off {
+			width: 80px;
+			height: 80px;
+			border-radius: 50%;
+			background: #222;
+			margin: 10px;
+		}
+
+		.light-on {
+			width: 80px;
+			height: 80px;
+			border-radius: 50%;
+			background: red;
+			margin: 10px;
+		}
+
+		.buttons {
+			margin: 10px;
+			display: flex;
+			justify-content: center;
+		}
+
+		button {
+			width: 50px;
+			height: 30px;
+			margin-left: 20px;
+			margin-right: 20px;
+		}
+
+		.message {
+			margin: 10px;
+			font-size: 24px;
+			text-align: center;
+		}
+
+		.jump-start {
+			font-size: 32px;
+			font-weight: bold;
+		}
+	</style>
+
+</head>
+
+<body>
+	<div id="myapp"></div>
+	<script>
+		var app = Elm.Main.init({
+			node: document.getElementById('myapp')
+		});
+	</script>
+</body>
+
+</html>

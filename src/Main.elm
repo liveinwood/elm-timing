@@ -2,10 +2,9 @@ module Main exposing (..)
 
 import Browser
 import Html exposing (Html, button, div, text)
+import Html.Attributes exposing (class, id)
 import Html.Events exposing (onClick)
 import Maybe
-import Svg exposing (Svg, circle, rect, svg)
-import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, viewBox, width, x, y)
 import Task
 import Time
 
@@ -163,57 +162,47 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ div [] [ lightBox model ]
-        , button [ onClick Start ] [ text "start" ]
-        , button [ onClick Stop ] [ text "stop" ]
-        , button [ onClick Reset ] [ text "reset" ]
+    div [ id "main" ]
+        [ div [ class "lights" ] (fiveLights 0 model.count)
+        , div [ class "buttons" ]
+            [ button [ onClick Start ] [ text "start" ]
+            , button [ onClick Stop ] [ text "stop" ]
+            , button [ onClick Reset ] [ text "reset" ]
+            ]
         , showResult model
         ]
 
 
-lightBox : Model -> Html Msg
-lightBox model =
-    svg
-        [ width "500", height "100", viewBox "100 100 600 100" ]
-        (rect [ x "100", y "100", width "500", height "100", rx "10", ry "10", fill "black" ] []
-            :: List.reverse (fiveLights 0 150 model.count)
-        )
-
-
-fiveLights : Int -> Int -> Int -> List (Svg Msg)
-fiveLights i x count =
+fiveLights : Int -> Int -> List (Html Msg)
+fiveLights i count =
     if i >= 5 then
         []
 
     else
-        circle
-            [ cx (String.fromInt x)
-            , cy "150"
-            , r "40"
-            , fill
+        div
+            [ class
                 (if i < count then
-                    "red"
+                    "light-on"
 
                  else
-                    "#222"
+                    "light-off"
                 )
             ]
             []
-            :: fiveLights (i + 1) (x + 100) count
+            :: fiveLights (i + 1) count
 
 
 showResult : Model -> Html Msg
 showResult model =
     case model.state of
         Init ->
-            div [] [ text "Are You Ready ?" ]
+            div [ class "message" ] [ text "Are You Ready ?" ]
 
         JumpStart ->
-            div [] [ text "Jump Start !" ]
+            div [ class "message jump-start" ] [ text "Jump Start !" ]
 
         Stopped ->
-            div [] [ text ("Your Result is " ++ String.fromFloat (Maybe.withDefault 0 (reactionTime model))) ]
+            div [ class "message" ] [ text ("Your Result is " ++ String.fromFloat (Maybe.withDefault 0 (reactionTime model))) ]
 
         _ ->
-            div [] []
+            div [ class "message" ] []
