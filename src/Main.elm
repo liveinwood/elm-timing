@@ -3,6 +3,10 @@ module Main exposing (..)
 import Browser
 import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
+import Maybe
+import Svg exposing (Svg, circle, rect, svg)
+import Svg.Attributes exposing (cx, cy, fill, height, r, rx, ry, viewBox, width, x, y)
+import Task
 import Time
 
 
@@ -26,26 +30,39 @@ main =
 
 type State
     = Init
-    | Running Int
+    | Running
     | AllBlack
+    | JumpStart
     | Stopped
 
 
 type alias Model =
     { state : State
-    , startAt : Maybe Int
-    , stopAt : Maybe Int
+    , count : Int
+    , startAt : Maybe Time.Posix
+    , stopAt : Maybe Time.Posix
+    , reactionTime : Maybe Float
     }
 
 
 initModel : Model
 initModel =
-    Model Init Nothing Nothing
+    Model Init 0 Nothing Nothing Nothing
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( initModel, Cmd.none )
+
+
+reactionTime : Model -> Maybe Float
+reactionTime model =
+    Maybe.map millToSecond (Maybe.map2 (-) (Maybe.map Time.posixToMillis model.stopAt) (Maybe.map Time.posixToMillis model.startAt))
+
+
+millToSecond : Int -> Float
+millToSecond n =
+    toFloat n / 1000
 
 
 
@@ -55,6 +72,8 @@ init _ =
 type Msg
     = Start
     | Tick Time.Posix
+    | SetStartAt Time.Posix
+    | SetStopAt Time.Posix
     | Stop
     | Reset
 
@@ -64,27 +83,33 @@ update msg model =
     let
         state =
             model.state
+
+        count =
+            model.count
     in
     case state of
         Init ->
             case msg of
                 Start ->
-                    ( { model | state = Running 0 }, Cmd.none )
+                    ( { model | state = Running }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
-        Running n ->
+        Running ->
             case msg of
                 Tick _ ->
-                    if n >= 3 then
-                        ( { model | state = AllBlack, startAt = Just 0 }, Cmd.none )
+                    if count >= 5 then
+                        ( model, Task.perform SetStartAt Time.now )
 
                     else
-                        ( { model | state = Running (n + 1) }, Cmd.none )
+                        ( { model | count = count + 1 }, Cmd.none )
+
+                SetStartAt time ->
+                    ( { model | state = AllBlack, count = 0, startAt = Just time }, Cmd.none )
 
                 Stop ->
-                    ( { model | state = Stopped }, Cmd.none )
+                    ( { model | state = JumpStart }, Cmd.none )
 
                 Reset ->
                     ( initModel, Cmd.none )
@@ -95,8 +120,19 @@ update msg model =
         AllBlack ->
             case msg of
                 Stop ->
-                    ( { model | state = Stopped, stopAt = Just 1 }, Cmd.none )
+                    ( model, Task.perform SetStopAt Time.now )
 
+                SetStopAt time ->
+                    ( { model | state = Stopped, stopAt = Just time, reactionTime = reactionTime model }, Cmd.none )
+
+                Reset ->
+                    ( initModel, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        JumpStart ->
+            case msg of
                 Reset ->
                     ( initModel, Cmd.none )
 
@@ -118,35 +154,66 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 2000 Tick
+    Time.every 1000 Tick
 
 
 
 -- VIEW
 
 
-light : Model -> String
-light model =
-    case model.state of
-        Init ->
-            "○○○"
-
-        Running n ->
-            String.append (String.repeat n "◎")
-                (String.repeat (3 - n) "●")
-
-        AllBlack ->
-            "●●●"
-
-        Stopped ->
-            "stopped"
-
-
 view : Model -> Html Msg
 view model =
     div []
-        [ div [] [ text (light model) ]
+        [ div [] [ lightBox model ]
         , button [ onClick Start ] [ text "start" ]
         , button [ onClick Stop ] [ text "stop" ]
         , button [ onClick Reset ] [ text "reset" ]
+        , showResult model
         ]
+
+
+lightBox : Model -> Html Msg
+lightBox model =
+    svg
+        [ width "500", height "100", viewBox "100 100 600 100" ]
+        (rect [ x "100", y "100", width "500", height "100", rx "10", ry "10", fill "black" ] []
+            :: List.reverse (fiveLights 0 150 model.count)
+        )
+
+
+fiveLights : Int -> Int -> Int -> List (Svg Msg)
+fiveLights i x count =
+    if i >= 5 then
+        []
+
+    else
+        circle
+            [ cx (String.fromInt x)
+            , cy "150"
+            , r "40"
+            , fill
+                (if i < count then
+                    "red"
+
+                 else
+                    "#222"
+                )
+            ]
+            []
+            :: fiveLights (i + 1) (x + 100) count
+
+
+showResult : Model -> Html Msg
+showResult model =
+    case model.state of
+        Init ->
+            div [] [ text "Are You Ready ?" ]
+
+        JumpStart ->
+            div [] [ text "Jump Start !" ]
+
+        Stopped ->
+            div [] [ text ("Your Result is " ++ String.fromFloat (Maybe.withDefault 0 (reactionTime model))) ]
+
+        _ ->
+            div [] []
